@@ -438,8 +438,8 @@
         にGoogleアカウントでログインし、「Get API Key」からクレジットカード登録なしで発行できます。1日あたりの無料利用回数に上限がありますが、通常の日常使いなら十分な量です。
       </p>
       <label class="field-label">使用するモデル</label>
-      <input type="text" id="geminiModelInput" value="gemini-2.5-flash" placeholder="gemini-2.5-flash">
-      <p class="note">無料枠の上限に達したら「gemini-2.5-flash-lite」など、別のモデル名も試してみてください。</p>
+      <input type="text" id="geminiModelInput" value="gemini-flash-latest" placeholder="gemini-flash-latest">
+      <p class="note">「gemini-flash-latest」は常にGoogleの最新Flashモデルを指すエイリアスです。無料枠の上限に達したら「gemini-2.5-flash-lite」など、より軽いモデル名も試してみてください。</p>
     </div>
 
     <div id="anthropicSection" hidden>
@@ -564,7 +564,7 @@
       apiKey: localStorage.getItem(SETTINGS_KEY_API) || '',
       model: localStorage.getItem(SETTINGS_KEY_MODEL) || 'claude-sonnet-5',
       geminiKey: localStorage.getItem(SETTINGS_KEY_GEMINI_KEY) || '',
-      geminiModel: localStorage.getItem(SETTINGS_KEY_GEMINI_MODEL) || 'gemini-2.5-flash'
+      geminiModel: localStorage.getItem(SETTINGS_KEY_GEMINI_MODEL) || 'gemini-flash-latest'
     };
   }
   function applyProviderVisibility(provider){
@@ -590,7 +590,7 @@
     localStorage.setItem(SETTINGS_KEY_API, $('apiKeyInput').value.trim());
     localStorage.setItem(SETTINGS_KEY_MODEL, $('modelSelect').value);
     localStorage.setItem(SETTINGS_KEY_GEMINI_KEY, $('geminiKeyInput').value.trim());
-    localStorage.setItem(SETTINGS_KEY_GEMINI_MODEL, $('geminiModelInput').value.trim() || 'gemini-2.5-flash');
+    localStorage.setItem(SETTINGS_KEY_GEMINI_MODEL, $('geminiModelInput').value.trim() || 'gemini-flash-latest');
     $('settingsOverlay').hidden = true;
   });
   $('apiKeyClear').addEventListener('click', ()=>{
@@ -631,7 +631,7 @@
   async function callGemini(system, contents){
     const { geminiKey, geminiModel } = getSettings();
     if(!geminiKey){ const e = new Error('no_api_key'); throw e; }
-    const model = geminiModel || 'gemini-2.5-flash';
+    const model = geminiModel || 'gemini-flash-latest';
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'x-goog-api-key': geminiKey },
