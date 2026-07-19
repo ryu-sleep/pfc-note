@@ -423,20 +423,41 @@
       <h2>設定</h2>
       <button class="modal__close" id="settingsClose" aria-label="閉じる">×</button>
     </div>
-    <label class="field-label">Anthropic APIキー</label>
-    <input type="password" id="apiKeyInput" placeholder="sk-ant-...">
-    <p class="note">
-      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>
-      で発行したキーを貼り付けてください。キーはこの端末のブラウザ内だけに保存され、Anthropic以外のどこにも送信されません。写真やAIとのやり取りはAnthropicのAPIに直接送信され、このアプリ自体はサーバーを持ちません。
-    </p>
-    <label class="field-label">使用するモデル</label>
-    <select id="modelSelect">
-      <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5（速い・安い）</option>
-      <option value="claude-sonnet-5">Claude Sonnet 5（バランス・推奨）</option>
+    <label class="field-label">AIプロバイダー</label>
+    <select id="providerSelect">
+      <option value="gemini">Google Gemini（無料）</option>
+      <option value="anthropic">Anthropic Claude（有料・高精度）</option>
     </select>
-    <p class="note">利用料金はご自身のAnthropicアカウントに従量課金されます。</p>
+
+    <div id="geminiSection">
+      <label class="field-label">Gemini APIキー</label>
+      <input type="password" id="geminiKeyInput" placeholder="AIzaSy...">
+      <p class="note">
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>
+        にGoogleアカウントでログインし、「Get API Key」からクレジットカード登録なしで発行できます。1日あたりの無料利用回数に上限がありますが、通常の日常使いなら十分な量です。
+      </p>
+      <label class="field-label">使用するモデル</label>
+      <input type="text" id="geminiModelInput" value="gemini-2.5-flash" placeholder="gemini-2.5-flash">
+      <p class="note">無料枠の上限に達したら「gemini-2.5-flash-lite」など、別のモデル名も試してみてください。</p>
+    </div>
+
+    <div id="anthropicSection" hidden>
+      <label class="field-label">Anthropic APIキー</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-...">
+      <p class="note">
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>
+        で発行したキーを貼り付けてください。利用料金はご自身のAnthropicアカウントに従量課金されます。
+      </p>
+      <label class="field-label">使用するモデル</label>
+      <select id="modelSelect">
+        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5（速い・安い）</option>
+        <option value="claude-sonnet-5">Claude Sonnet 5（バランス・推奨）</option>
+      </select>
+    </div>
+
+    <p class="note">キーはこの端末のブラウザ内だけに保存され、選んだAI提供元以外のどこにも送信されません。</p>
     <div class="modal__footer">
-      <button class="btn-ghost" id="apiKeyClear">キーを削除</button>
+      <button class="btn-ghost" id="apiKeyClear">このキーを削除</button>
       <button class="btn-primary" id="apiKeySave">保存する</button>
     </div>
   </div>
@@ -445,8 +466,11 @@
 <script>
 (function(){
   const STORAGE_PREFIX = 'meals:';
+  const SETTINGS_KEY_PROVIDER = 'pfc_note_provider';
   const SETTINGS_KEY_API = 'pfc_note_api_key';
   const SETTINGS_KEY_MODEL = 'pfc_note_model';
+  const SETTINGS_KEY_GEMINI_KEY = 'pfc_note_gemini_key';
+  const SETTINGS_KEY_GEMINI_MODEL = 'pfc_note_gemini_model';
   const MEAL_SLOTS = 3;
 
   const state = {
@@ -535,30 +559,51 @@
   // ---------- settings ----------
   function getSettings(){
     return {
+      provider: localStorage.getItem(SETTINGS_KEY_PROVIDER) || 'gemini',
       apiKey: localStorage.getItem(SETTINGS_KEY_API) || '',
-      model: localStorage.getItem(SETTINGS_KEY_MODEL) || 'claude-sonnet-5'
+      model: localStorage.getItem(SETTINGS_KEY_MODEL) || 'claude-sonnet-5',
+      geminiKey: localStorage.getItem(SETTINGS_KEY_GEMINI_KEY) || '',
+      geminiModel: localStorage.getItem(SETTINGS_KEY_GEMINI_MODEL) || 'gemini-2.5-flash'
     };
+  }
+  function applyProviderVisibility(provider){
+    $('geminiSection').hidden = provider!=='gemini';
+    $('anthropicSection').hidden = provider!=='anthropic';
   }
   function openSettings(){
     const s = getSettings();
+    $('providerSelect').value = s.provider;
     $('apiKeyInput').value = s.apiKey;
     $('modelSelect').value = s.model;
+    $('geminiKeyInput').value = s.geminiKey;
+    $('geminiModelInput').value = s.geminiModel;
+    applyProviderVisibility(s.provider);
     $('settingsOverlay').hidden = false;
   }
   $('openSettings').addEventListener('click', openSettings);
   $('settingsClose').addEventListener('click', ()=>{ $('settingsOverlay').hidden = true; });
   $('settingsOverlay').addEventListener('click', e=>{ if(e.target.id==='settingsOverlay') $('settingsOverlay').hidden = true; });
+  $('providerSelect').addEventListener('change', ()=> applyProviderVisibility($('providerSelect').value));
   $('apiKeySave').addEventListener('click', ()=>{
+    localStorage.setItem(SETTINGS_KEY_PROVIDER, $('providerSelect').value);
     localStorage.setItem(SETTINGS_KEY_API, $('apiKeyInput').value.trim());
     localStorage.setItem(SETTINGS_KEY_MODEL, $('modelSelect').value);
+    localStorage.setItem(SETTINGS_KEY_GEMINI_KEY, $('geminiKeyInput').value.trim());
+    localStorage.setItem(SETTINGS_KEY_GEMINI_MODEL, $('geminiModelInput').value.trim() || 'gemini-2.5-flash');
     $('settingsOverlay').hidden = true;
   });
   $('apiKeyClear').addEventListener('click', ()=>{
-    localStorage.removeItem(SETTINGS_KEY_API);
-    $('apiKeyInput').value = '';
+    const provider = $('providerSelect').value;
+    if(provider==='gemini'){
+      localStorage.removeItem(SETTINGS_KEY_GEMINI_KEY);
+      $('geminiKeyInput').value = '';
+    }else{
+      localStorage.removeItem(SETTINGS_KEY_API);
+      $('apiKeyInput').value = '';
+    }
   });
 
-  // ---------- claude api (BYOK, direct from browser) ----------
+  // ---------- AI呼び出し（Anthropic / Gemini 共通の窓口） ----------
   async function callClaude(system, messages){
     const { apiKey, model } = getSettings();
     if(!apiKey){ const e = new Error('no_api_key'); throw e; }
@@ -578,6 +623,23 @@
     if(!block) throw new Error('no_text_block');
     return block.text;
   }
+  async function callGemini(system, contents){
+    const { geminiKey, geminiModel } = getSettings();
+    if(!geminiKey){ const e = new Error('no_api_key'); throw e; }
+    const model = geminiModel || 'gemini-2.5-flash';
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'x-goog-api-key': geminiKey },
+      body: JSON.stringify({ systemInstruction:{ parts:[{ text: system }] }, contents })
+    });
+    if(!res.ok) throw new Error('api_error_'+res.status);
+    const data = await res.json();
+    const cand = data.candidates && data.candidates[0];
+    const parts = cand && cand.content && cand.content.parts;
+    const text = parts && parts.map(p=>p.text||'').join('');
+    if(!text) throw new Error('no_text_block');
+    return text;
+  }
   function extractJSON(text){
     const cleaned = text.replace(/```json|```/g,'').trim();
     const match = cleaned.match(/\{[\s\S]*\}/);
@@ -587,15 +649,28 @@
 
   async function analyzeImage(base64, mediaType, refineText){
     const userText = refineText ? `補足情報：${refineText}` : '写真からPFCを推定してください。';
-    const content = [
-      { type:'image', source:{ type:'base64', media_type: mediaType, data: base64 } },
-      { type:'text', text: userText }
-    ];
-    const text = await callClaude(PFC_SYSTEM, [{ role:'user', content }]);
+    const { provider } = getSettings();
+    let text;
+    if(provider==='gemini'){
+      const contents = [{ role:'user', parts:[ {text:userText}, {inlineData:{mimeType:mediaType, data:base64}} ] }];
+      text = await callGemini(PFC_SYSTEM, contents);
+    }else{
+      const content = [
+        { type:'image', source:{ type:'base64', media_type: mediaType, data: base64 } },
+        { type:'text', text: userText }
+      ];
+      text = await callClaude(PFC_SYSTEM, [{ role:'user', content }]);
+    }
     return extractJSON(text);
   }
   async function analyzeText(desc){
-    const text = await callClaude(PFC_SYSTEM, [{ role:'user', content: desc }]);
+    const { provider } = getSettings();
+    let text;
+    if(provider==='gemini'){
+      text = await callGemini(PFC_SYSTEM, [{ role:'user', parts:[{text:desc}] }]);
+    }else{
+      text = await callClaude(PFC_SYSTEM, [{ role:'user', content: desc }]);
+    }
     return extractJSON(text);
   }
   const CHAT_SYSTEM = 'あなたは栄養と食事管理をサポートするアシスタントです。PFC（タンパク質・脂質・炭水化物）やカロリー、食材、食事に関する質問に、簡潔で分かりやすい日本語で答えてください。断定しすぎず、必要であれば専門家への相談も勧めてください。';
@@ -606,7 +681,7 @@
       const link = document.getElementById('openSettingsFromError_'+targetId);
       if(link) link.addEventListener('click', ev=>{ ev.preventDefault(); openSettings(); });
     }else{
-      $(targetId).textContent = '解析に失敗しました。APIキーやモデル設定を確認し、もう一度お試しください。';
+      $(targetId).textContent = '解析に失敗しました。APIキーやモデル名の設定を確認し、もう一度お試しください。';
     }
   }
 
@@ -987,7 +1062,14 @@
     renderChat();
     $('chatSend').disabled = true;
     try{
-      const reply = await callClaude(CHAT_SYSTEM, state.chatHistory.map(m=>({role:m.role, content:m.content})));
+      const { provider } = getSettings();
+      let reply;
+      if(provider==='gemini'){
+        const contents = state.chatHistory.map(m=>({ role: m.role==='assistant' ? 'model':'user', parts:[{text:m.content}] }));
+        reply = await callGemini(CHAT_SYSTEM, contents);
+      }else{
+        reply = await callClaude(CHAT_SYSTEM, state.chatHistory.map(m=>({role:m.role, content:m.content})));
+      }
       state.chatHistory.push({role:'assistant', content: reply});
     }catch(e){
       if(e && e.message==='no_api_key'){
@@ -1004,9 +1086,13 @@
   $('chatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChat(); });
 
   // ---------- init ----------
-  if(!getSettings().apiKey){
-    // 初回起動時は設定を促す（記録自体は使える）
-    setTimeout(openSettings, 400);
+  {
+    const s = getSettings();
+    const hasKey = s.provider==='gemini' ? !!s.geminiKey : !!s.apiKey;
+    if(!hasKey){
+      // 初回起動時は設定を促す（記録自体は使える）
+      setTimeout(openSettings, 400);
+    }
   }
   loadDay();
 })();
