@@ -618,7 +618,11 @@
       },
       body: JSON.stringify({ model, max_tokens: 1000, system, messages })
     });
-    if(!res.ok) throw new Error('api_error_'+res.status);
+    if(!res.ok){
+      let detail = '';
+      try{ const errBody = await res.json(); detail = (errBody.error && errBody.error.message) || JSON.stringify(errBody); }catch(e){}
+      throw new Error('api_error_'+res.status+(detail ? ': '+detail : ''));
+    }
     const data = await res.json();
     const block = (data.content||[]).find(b=>b.type==='text');
     if(!block) throw new Error('no_text_block');
@@ -633,7 +637,11 @@
       headers:{ 'Content-Type':'application/json', 'x-goog-api-key': geminiKey },
       body: JSON.stringify({ systemInstruction:{ parts:[{ text: system }] }, contents })
     });
-    if(!res.ok) throw new Error('api_error_'+res.status);
+    if(!res.ok){
+      let detail = '';
+      try{ const errBody = await res.json(); detail = (errBody.error && errBody.error.message) || JSON.stringify(errBody); }catch(e){}
+      throw new Error('api_error_'+res.status+(detail ? ': '+detail : ''));
+    }
     const data = await res.json();
     const cand = data.candidates && data.candidates[0];
     const parts = cand && cand.content && cand.content.parts;
@@ -682,7 +690,8 @@
       const link = document.getElementById('openSettingsFromError_'+targetId);
       if(link) link.addEventListener('click', ev=>{ ev.preventDefault(); openSettings(); });
     }else{
-      $(targetId).textContent = '解析に失敗しました。APIキーやモデル名の設定を確認し、もう一度お試しください。';
+      const detail = e && e.message ? escapeHTML(e.message) : '';
+      $(targetId).textContent = '解析に失敗しました。' + (detail ? '（' + detail + '）' : 'もう一度お試しください。');
     }
   }
 
